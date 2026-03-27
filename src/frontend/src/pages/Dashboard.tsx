@@ -10,8 +10,10 @@ import {
   Clock,
   Download,
   Film,
+  Play,
   Sparkles,
   Wand2,
+  X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -19,83 +21,165 @@ import { toast } from "sonner";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   DURATION_OPTIONS,
-  VIDEO_CATEGORIES,
   VIDEO_STYLES,
-  type VideoCategory,
   type VideoStyle,
   useAppStore,
 } from "../store/appStore";
+
+const SAMPLE_VIDEO_URLS = [
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+];
 
 function VideoCard({
   video,
   index,
 }: { video: import("../store/appStore").VideoJob; index: number }) {
+  const [playingVideo, setPlayingVideo] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const duration = DURATION_OPTIONS.find(
     (d) => d.value === video.durationSeconds,
   );
+  const videoUrl = SAMPLE_VIDEO_URLS[index % SAMPLE_VIDEO_URLS.length];
+
+  const handleClose = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = "";
+    }
+    setPlayingVideo(null);
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.08 }}
-      className="video-card group cursor-pointer"
-      data-ocid={`creations.item.${index + 1}`}
-    >
-      <div className="relative aspect-video overflow-hidden film-grain">
-        <img
-          src={video.thumbnailUrl}
-          alt={video.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-        {duration && (
-          <div className="absolute top-2 left-2">
-            <Badge className="bg-black/60 text-white border-white/20 text-xs">
-              <Clock size={10} className="mr-1" />
-              {duration.label}
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.08 }}
+        className="video-card group cursor-pointer"
+        data-ocid={`creations.item.${index + 1}`}
+      >
+        <div className="relative aspect-video overflow-hidden film-grain">
+          <img
+            src={video.thumbnailUrl}
+            alt={video.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+          {duration && (
+            <div className="absolute top-2 left-2">
+              <Badge className="bg-black/60 text-white border-white/20 text-xs">
+                <Clock size={10} className="mr-1" />
+                {duration.label}
+              </Badge>
+            </div>
+          )}
+          <div className="absolute top-2 right-2">
+            <Badge
+              className="bg-black/60 text-xs"
+              style={{ color: "oklch(var(--gold))" }}
+            >
+              {video.style}
             </Badge>
           </div>
+          {/* Play overlay */}
+          <button
+            type="button"
+            onClick={() =>
+              setPlayingVideo({ url: videoUrl, title: video.title })
+            }
+            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            data-ocid={`creations.play.${index + 1}`}
+          >
+            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+              <Play size={20} className="text-white ml-0.5" />
+            </div>
+          </button>
+          <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              size="sm"
+              variant="secondary"
+              className="w-full h-7 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                window.open(videoUrl, "_blank");
+              }}
+              data-ocid={`creations.download.${index + 1}`}
+            >
+              <Download size={12} className="mr-1" />
+              Download
+            </Button>
+          </div>
+        </div>
+        <div className="p-4">
+          <h3 className="font-display font-semibold text-foreground text-sm mb-1 truncate">
+            {video.title}
+          </h3>
+          <p className="text-muted-foreground text-xs truncate mb-2">
+            {video.prompt}
+          </p>
+          <div className="flex items-center justify-between">
+            <Badge
+              variant="outline"
+              className="text-xs border-border text-muted-foreground"
+            >
+              {video.category}
+            </Badge>
+            <span className="text-xs text-muted-foreground">
+              {new Date(video.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Video Player Modal */}
+      <AnimatePresence>
+        {playingVideo && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleClose}
+            data-ocid="creations.modal"
+          >
+            <motion.div
+              className="relative w-full max-w-4xl"
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={handleClose}
+                className="absolute -top-10 right-0 text-white/70 hover:text-white transition-colors"
+                data-ocid="creations.modal.close_button"
+              >
+                <X size={24} />
+              </button>
+              <div className="text-white/80 text-sm font-medium mb-2 truncate">
+                {playingVideo.title}
+              </div>
+              <video
+                ref={videoRef}
+                src={playingVideo.url}
+                controls
+                autoPlay
+                className="w-full rounded-xl bg-black aspect-video"
+              />
+            </motion.div>
+          </motion.div>
         )}
-        <div className="absolute top-2 right-2">
-          <Badge
-            className="bg-black/60 text-xs"
-            style={{ color: "oklch(var(--gold))" }}
-          >
-            {video.style}
-          </Badge>
-        </div>
-        <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="w-full h-7 text-xs"
-            data-ocid={`creations.download.${index + 1}`}
-          >
-            <Download size={12} className="mr-1" />
-            Download
-          </Button>
-        </div>
-      </div>
-      <div className="p-4">
-        <h3 className="font-display font-semibold text-foreground text-sm mb-1 truncate">
-          {video.title}
-        </h3>
-        <p className="text-muted-foreground text-xs truncate mb-2">
-          {video.prompt}
-        </p>
-        <div className="flex items-center justify-between">
-          <Badge
-            variant="outline"
-            className="text-xs border-border text-muted-foreground"
-          >
-            {video.category}
-          </Badge>
-          <span className="text-xs text-muted-foreground">
-            {new Date(video.createdAt).toLocaleDateString()}
-          </span>
-        </div>
-      </div>
-    </motion.div>
+      </AnimatePresence>
+    </>
   );
 }
 
@@ -174,7 +258,7 @@ export default function Dashboard() {
             <Sparkles size={20} style={{ color: "oklch(var(--gold))" }} />
             <div>
               <div className="font-semibold text-foreground text-sm">
-                Welcome to Sora 2 CINE AI! 🎬
+                Welcome to Vora 2! 🎬
               </div>
               <div className="text-muted-foreground text-xs">
                 300 free credits have been added to your account. Start
@@ -213,7 +297,7 @@ export default function Dashboard() {
               AI Video Studio
             </p>
             <h1 className="font-display font-black text-3xl md:text-5xl mb-3">
-              <span className="text-gold-gradient">SORA 2: CINE AI</span>
+              <span className="text-gold-gradient">VORA 2</span>
               <br />
               <span className="text-foreground">AI Video Generation</span>
             </h1>

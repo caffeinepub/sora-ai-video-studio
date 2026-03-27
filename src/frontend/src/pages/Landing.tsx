@@ -68,11 +68,11 @@ export default function Landing() {
                 "linear-gradient(135deg, oklch(0.50 0.23 278), oklch(0.55 0.22 302))",
             }}
           >
-            S
+            V
           </div>
-          <span className="font-display font-bold text-foreground">Sora 2</span>
+          <span className="font-display font-bold text-foreground">Vora 2</span>
           <Badge variant="outline" className="text-gold border-gold/40 text-xs">
-            CINE AI
+            AI Studio
           </Badge>
         </div>
         <div className="flex items-center gap-3">
@@ -119,7 +119,7 @@ export default function Landing() {
               Now with 8-minute video generation
             </Badge>
             <h1 className="font-display font-black text-5xl md:text-7xl leading-tight mb-4">
-              <span className="text-gold-gradient">SORA 2: CINE AI</span>
+              <span className="text-gold-gradient">VORA 2</span>
               <br />
               <span className="text-foreground">AI Video Generation</span>
             </h1>
@@ -258,10 +258,10 @@ export default function Landing() {
                     "linear-gradient(135deg, oklch(0.50 0.23 278), oklch(0.55 0.22 302))",
                 }}
               >
-                S
+                V
               </div>
               <span className="font-display font-bold text-foreground">
-                Sora 2 CINE AI
+                Vora 2
               </span>
             </div>
             <p className="text-muted-foreground text-sm">

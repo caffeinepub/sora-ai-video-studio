@@ -99,11 +99,9 @@ export default function Pricing() {
                 "linear-gradient(135deg, oklch(0.50 0.23 278), oklch(0.55 0.22 302))",
             }}
           >
-            S
+            V
           </div>
-          <span className="font-display font-bold text-foreground">
-            Sora 2 CINE AI
-          </span>
+          <span className="font-display font-bold text-foreground">Vora 2</span>
         </div>
       </div>
 

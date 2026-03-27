@@ -2,9 +2,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@tanstack/react-router";
-import { Clock, Download, Film, Play, Search, Trash2 } from "lucide-react";
+import { Clock, Download, Film, Play, Search, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
@@ -17,12 +17,26 @@ import {
 const ALL_CATEGORIES = ["All", ...VIDEO_CATEGORIES] as const;
 type CategoryFilter = (typeof ALL_CATEGORIES)[number];
 
+const SAMPLE_VIDEO_URLS = [
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+];
+
 export default function Library() {
   const { identity } = useInternetIdentity();
   const { videos, deleteVideo } = useAppStore();
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const [playingVideo, setPlayingVideo] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const filtered = videos.filter((v) => {
     const matchCat = activeCategory === "All" || v.category === activeCategory;
@@ -37,6 +51,17 @@ export default function Library() {
     deleteVideo(id);
     toast.success(`"${title}" removed from library`);
   };
+
+  const handleClosePlayer = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = "";
+    }
+    setPlayingVideo(null);
+  };
+
+  // Suppress unused variable warning — identity used for ownership checks elsewhere
+  void identity;
 
   return (
     <div className="p-5 md:p-8">
@@ -144,7 +169,8 @@ export default function Library() {
                 const duration = DURATION_OPTIONS.find(
                   (d) => d.value === video.durationSeconds,
                 );
-                identity?.getPrincipal().toString() === video.ownerId;
+                const videoUrl =
+                  SAMPLE_VIDEO_URLS[i % SAMPLE_VIDEO_URLS.length];
                 return (
                   <motion.div
                     key={video.id}
@@ -169,11 +195,18 @@ export default function Library() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                       {/* Play overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() =>
+                          setPlayingVideo({ url: videoUrl, title: video.title })
+                        }
+                        data-ocid={`library.play.${i + 1}`}
+                      >
                         <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
                           <Play size={20} className="text-white ml-0.5" />
                         </div>
-                      </div>
+                      </button>
                       {duration && (
                         <div className="absolute top-2 left-2">
                           <Badge className="bg-black/60 text-white border-white/20 text-xs">
@@ -210,7 +243,7 @@ export default function Library() {
                             size="sm"
                             variant="ghost"
                             className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                            onClick={() => toast.info("Download started!")}
+                            onClick={() => window.open(videoUrl, "_blank")}
                             data-ocid={`library.download.${i + 1}`}
                           >
                             <Download size={12} className="mr-1" />
@@ -239,6 +272,58 @@ export default function Library() {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Video Player Modal */}
+      <AnimatePresence>
+        {playingVideo && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleClosePlayer}
+            data-ocid="library.modal"
+          >
+            <motion.div
+              className="relative w-full max-w-4xl"
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={handleClosePlayer}
+                className="absolute -top-10 right-0 text-white/70 hover:text-white transition-colors"
+                data-ocid="library.modal.close_button"
+              >
+                <X size={24} />
+              </button>
+              <div className="text-white/80 text-sm font-medium mb-2 truncate">
+                {playingVideo.title}
+              </div>
+              <video
+                ref={videoRef}
+                src={playingVideo.url}
+                controls
+                autoPlay
+                className="w-full rounded-xl bg-black aspect-video"
+              />
+              <div className="mt-3 flex justify-end">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => window.open(playingVideo.url, "_blank")}
+                  data-ocid="library.modal.download_button"
+                >
+                  <Download size={14} className="mr-1.5" />
+                  Download Video
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <footer className="border-t border-border pt-6 mt-10 text-center text-xs text-muted-foreground">
         &copy; {new Date().getFullYear()}. Built with &#9829; using{" "}

@@ -61,13 +61,13 @@ function SidebarContent({
               "linear-gradient(135deg, oklch(0.50 0.23 278), oklch(0.55 0.22 302))",
           }}
         >
-          S
+          V
         </div>
         <div>
           <div className="font-display font-bold text-foreground text-sm">
-            Sora 2
+            Vora 2
           </div>
-          <div className="text-xs text-muted-foreground">CINE AI Studio</div>
+          <div className="text-xs text-muted-foreground">AI Video Studio</div>
         </div>
       </div>
       <nav className="flex-1 px-3 py-4 space-y-1">
